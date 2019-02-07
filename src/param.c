@@ -15,22 +15,25 @@
 void	longname_opt(char *str)
 {
 	(void)str;
-	fprintf(stderr, "ping: function not inplemented\n");
+	fprintf(stderr, "traceroute: function not inplemented\n");
 	exit(EXIT_FAILURE);
 }
 
-t_parameters *store_parameters(char *str, enum options flag)
+static t_parameters *store_parameters(char *str, enum options flag)
 {
-	t_parameters *new_param;
+	static t_parameters new_param;
 
-	new_param = ft_memalloc(sizeof(t_parameters));
-	new_param->str = str;
-	new_param->code = flag;
-	return (new_param);
+	new_param.str = str;
+	new_param.code = flag;
+	return (&new_param);
 }
 
 static struct params_getter options[] = {
 	{"help", 'h', HELP, NULL},
+	{"max", 'm', MAX, store_parameters},
+	{"tcp", 'T', TCP, NULL},
+	{"icmp", 'I', ICMP, NULL},
+	{"udp", 'U', UDP, NULL},
 };
 
 t_list		*get_params(char **argv, int argc, uint8_t *flag)
@@ -68,7 +71,7 @@ t_list		*get_params(char **argv, int argc, uint8_t *flag)
 									options[index].f(argv[++i],\
 									options[index].code), sizeof(t_parameters));
 							else {
-									fprintf(stderr, "ping: option requires an argument -- '%c'\n", c);
+									fprintf(stderr, "traceroute: option requires an argument -- '%c'\n", c);
 									exit(EXIT_FAILURE);
 							}
 						}
@@ -76,7 +79,7 @@ t_list		*get_params(char **argv, int argc, uint8_t *flag)
 					}
 				}
 				if (flag_has_found != 1) {
-					fprintf(stderr, "ping: invalid option -- '%c'\n", c);
+					fprintf(stderr, "traceroute: invalid option -- '%c'\n", c);
 					exit(EXIT_FAILURE);
 				} else
 					break ;
@@ -91,14 +94,28 @@ t_list		*get_params(char **argv, int argc, uint8_t *flag)
 void	get_options(int argc, char **argv)
 {
 	char *ip_addr;
+	uint64_t hops = 0;
 	t_list	*parameters;
 
 	ft_bzero(&env, sizeof(env));
 	parameters = get_params(argv, argc, &env.flag.value);
 	if (env.flag.value & HELP || (ip_addr = get_targeted_domain(parameters)) == NULL) {
-			fprintf(stderr, USAGE); exit(EXIT_FAILURE);
+		fprintf(stderr, USAGE); exit(EXIT_FAILURE);
 	}
-	env.pid = getpid();
+	if (env.flag.value & MAX && (hops = get_ttl(parameters)) == 0) {
+		fprintf(stderr, ERR_HOPS); exit(EXIT_FAILURE);
+	} else if (hops > 255) {
+		fprintf(stderr, TOO_MANY_HOPS); exit(EXIT_FAILURE);
+	}
+	if (env.flag.value & TCP) {
+		env.proto = IPPROTO_TCP;
+	} else if (env.flag.value & UDP) {
+		env.proto = IPPROTO_UDP;
+	} else {
+		env.proto = IPPROTO_ICMP;
+	}
+	env.flag.hops = (hops > 0) ? hops : HOPS_MAX;	
+	env.pid = htons(getpid());
 	env.domain = ip_addr;
 	list_remove(&parameters, remove_content);
 }

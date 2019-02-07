@@ -15,8 +15,10 @@ SRC_PATH = ./src/
 SRC_NAME =	main.c \
 			param.c \
 			options.c \
-			display_recv_packet.c \
 			init.c \
+			udp.c \
+			tcp.c \
+			result.c \
 
 OBJ_PATH = ./.obj/
 
@@ -30,7 +32,7 @@ NAME = ft_traceroute
 	
 CC = gcc
 
-CFLAGS = -Wall -Wextra -fsanitize=address
+CFLAGS = -Wall -Wextra
 
 OBJ_NAME = $(SRC_NAME:.c=.o)
 

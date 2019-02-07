@@ -10,7 +10,7 @@ uint16_t	compute_checksum(void *data, size_t size)
 	size = size / 2; //to work on 16 bytes
 	result = 0;
 	ptr = (uint16_t*)data;
-	while (++i < size)
+	while (++i < size) 
 		result += ptr[i];
 	if (0xffff0000 & result) {
 		result = (result & 0xffff) + ((0xffff0000 & result) >> 16);
