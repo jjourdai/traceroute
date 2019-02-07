@@ -42,11 +42,15 @@ enum	options {
 struct buffer {
 	struct ip		ip;
 	struct icmphdr	icmp;
-	suseconds_t		time;
 	uint8_t			data[48];
 }__attribute__((packed));
 
-struct ping {
+struct data {
+	unsigned long	s_addr;
+	double			value;
+};
+
+struct traceroute {
 	int				soc;
 	uint8_t			send_packet;
 	uint8_t			recv_packet;
@@ -75,7 +79,7 @@ struct params_getter {
 	struct parameters *(*f)(char *, enum options);	
 };
 
-struct ping env;
+struct traceroute env;
 
 /* params.c */
 t_list	*get_params(char **argv, int argc, uint8_t *flag);
