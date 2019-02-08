@@ -37,54 +37,62 @@ void	is_root(void)
 void	store_result(const struct buffer *ptr, struct data *packets)
 {
 	struct timeval		time;
-	struct hostent		*p;
-	char				*name = NULL;
 	uint16_t			seq = ptr->icmp.un.echo.sequence; 
-	size_t				len = 0;
 
 	gettimeofday(&time, NULL);
 	packets[seq].value = (double)handle_timer(&time, &packets[seq].send) / 1000;
 	packets[seq].s_addr = env.to_recv.ip.ip_src.s_addr;
-	if ((p = gethostbyaddr(&env.to_recv.ip.ip_src.s_addr, 8, AF_INET))) {
-		len = ft_strlen(p->h_name);
-	} else {
-		name = inet_ntoa(env.to_recv.ip.ip_src);
-		len = ft_strlen(name);
-	}
-	if (p)
-		ft_memcpy(packets[seq].name, p->h_name, (len > NAME_LEN) ? NAME_LEN : len);
-	else
-		ft_memcpy(packets[seq].name, name, (len > NAME_LEN) ? NAME_LEN : len);
 	ft_memcpy(packets[seq].ip, inet_ntoa(env.to_recv.ip.ip_src), IP_LEN);
 }
 
-void	print_result(const struct data *packets, uint32_t seq)
+void	fill_string(struct data *packets, uint32_t t)
+{
+	uint32_t i = 0;
+	struct hostent		*p;
+	size_t				len = 0;
+
+	for (; i < 3; i++)
+	{
+		if ((p = gethostbyaddr(&packets[t + i].s_addr, 8, AF_INET))) {
+			len = ft_strlen(p->h_name);
+		}
+		if (p)
+			ft_memcpy(packets[t + i].name, p->h_name, (len > NAME_LEN) ? NAME_LEN : len);
+		else
+			ft_memcpy(packets[t + i].name, packets[t + i].ip, IP_LEN);
+	}
+}
+
+void	print_result(struct data *packets, uint32_t seq)
 {
 	uint32_t	i = -1;
 	uint32_t	t;
-		
+
 	while (++i < seq)
 	{
 		t = i * 3;
+		fill_string(packets, t);
 		if (packets[t].value == 0) {
-			printf("%d  * * *\n");
+			printf("%2d  * * *\n", i + 1);
 		} else {
-				printf("%d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
-				if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == packets[t].s_addr)
-						break ;
+	//		printf("%llx %llx %llx\n", packets[t].s_addr, packets[t + 1].s_addr, packets[t + 2].s_addr);
+	//		printf("%s %s %s\n", packets[t].ip, packets[t + 1].ip, packets[t + 2].ip);
+			if (packets[t].s_addr == packets[t + 1].s_addr && packets[t].s_addr == packets[t + 2].s_addr) {
+					printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
+			} else if (packets[t].s_addr == packets[t + 1].s_addr && packets[t].s_addr != packets[t + 2].s_addr) {
+					printf("%2d  %s (%s)  %.3f ms %.3f ms  %s (%s) %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].name, packets[t + 2].ip, packets[t + 2].value);
+			} else if (packets[t].s_addr != packets[t + 1].s_addr) {
+					printf("%2d  %s (%s)  %.3f ms  %s (%s) %.3f ms  %s (%s) %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].name, packets[t + 1].ip, packets[t + 1].value, packets[t + 2].name, packets[t + 2].ip, packets[t + 2].value);
+			} else {
+					printf("Dwadawdaw");
+			}
+//			printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
+			if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == packets[t].s_addr)
+					break ;
 		}
 	}
 /*
-	if (save[0].s_addr == save[1].s_addr && save[0].s_addr == save[2].s_addr) {
-		printf("%d  %s (%s)  %.3f ms %.3f ms  %.3f ms", count, save[0].name, save[0].ip, save[0].value, save[1].value, save[2].value);
-	} else if (save[0].s_addr == save[1].s_addr && save[0].s_addr != save[2].s_addr) {
-		printf("%d  %s (%s)  %.3f ms %.3f ms  %s (%s) %.3f ms", count, save[0].name, save[0].ip, save[0].value, save[1].value, save[2].name, save[2].ip, save[2].value);
-	} else if (save[0].s_addr != save[1].s_addr) {
-		printf("%d  %s (%s)  %.3f ms  %s (%s) %.3f ms  %s (%s) %.3f ms", count, save[0].name, save[0].ip, save[0].value, save[1].name, save[1].ip, save[1].value, save[2].name, save[2].ip, save[2].value);
-	} else {
-		printf("Dwadawdaw");
-	}
-	printf(RED_TEXT("\n%llu %llu %llu\n"), save[0].s_addr, save[1].s_addr, save[2].s_addr); 
+	printf(RED_TEXT("\n%llu %llu %llu\n"), packets[0].s_addr, packets[1].s_addr, packets[2].s_addr); 
 */
 }
 
@@ -95,7 +103,7 @@ void	loop_exec(void)
 	uint32_t	seq = 1;
 	fd_set		read, write;
 	struct timeval	timeout = {
-		.tv_sec = 1, .tv_usec = 0,
+		.tv_sec = 3, .tv_usec = 0,
 	};
 
 	if ((packets = ft_memalloc(sizeof(struct data) * seq_total)) == NULL) {
@@ -109,13 +117,11 @@ void	loop_exec(void)
 			if (select(env.soc + 1, &read, &write, NULL, &timeout) == 0) {
 				ft_putendl("TIMEOUT");	break ;
 			}
-			if (FD_ISSET(env.soc, &write))
-			{
-				for (; seq <= seq_total; seq++) {
-					send_request(packets, seq);
-				}
+			if (FD_ISSET(env.soc, &write)) {
+					send_request(packets, seq++);
 			}
-			else if (FD_ISSET(env.soc, &read)) {
+			if (FD_ISSET(env.soc, &read)) {
+			//	ft_putendl("RECV");
 				ft_bzero(&env.to_recv, sizeof(struct buffer));
 				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, 0, NULL) != -1) {
 					if (env.to_recv.icmp.type == ICMP_TIME_EXCEEDED) {

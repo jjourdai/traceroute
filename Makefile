@@ -30,7 +30,7 @@ NAME = ft_traceroute
 	
 CC = gcc
 
-CFLAGS = -Wall -Wextra -fsanitize=address -g
+CFLAGS = -Wall -Wextra
 
 OBJ_NAME = $(SRC_NAME:.c=.o)
 

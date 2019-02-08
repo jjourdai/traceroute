@@ -52,7 +52,6 @@ struct buffer {
 
 struct data {
 	struct timeval send;
-//	struct timeval recv;
 	unsigned long	s_addr;
 	double		value;
 	char		name[NAME_LEN + 1];
