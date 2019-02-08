@@ -35,6 +35,8 @@
 # define HOPS_MAX 30
 # define TRUE 1
 # define FALSE 0
+# define IP_LEN 15
+# define NAME_LEN 255
 
 enum	options {
 	HELP = (1 << 0),
@@ -53,9 +55,9 @@ struct data {
 //	struct timeval recv;
 	unsigned long	s_addr;
 	double		value;
-	char		*name;
-	char		*ip;
-};
+	char		name[NAME_LEN + 1];
+	char		ip[IP_LEN + 1];
+}__attribute__((packed));
 
 struct traceroute {
 	int				soc;
@@ -65,7 +67,7 @@ struct traceroute {
 	uint16_t		pid;
 	char			*domain;
 	struct timeval	time;
-	struct addrinfo	*addrinfo;
+	struct addrinfo	addrinfo;
 	struct buffer	to_send;
 	struct buffer	to_recv;
 	struct msghdr	msg;

@@ -44,8 +44,8 @@ void	init_icmphdr(struct icmphdr *icmp)
 
 void	init_env_socket(char *domain)
 {
-	env.addrinfo = result_dns(domain);
-	if (((struct sockaddr_in*)env.addrinfo->ai_addr)->sin_addr.s_addr == INADDR_BROADCAST) {
+	ft_memcpy(&env.addrinfo, result_dns(domain), sizeof(struct addrinfo));
+	if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == INADDR_BROADCAST) {
 		fprintf(stderr, "Do you want to ping broadcast? but No\n"); exit(EXIT_FAILURE);
 	}
 	if ((env.soc = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {

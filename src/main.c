@@ -19,7 +19,7 @@ void	send_request(struct data *packets, uint32_t seq)
 	env.to_send.icmp.un.echo.sequence = seq - 1; env.to_send.icmp.checksum = 0;
 	env.to_send.icmp.checksum = compute_checksum(&env.to_send.icmp, sizeof(struct buffer) - sizeof(struct ip));
 	gettimeofday(&packets[seq - 1].send, NULL);
-	if (sendto(env.soc, &env.to_send, sizeof(env.to_send), 0, (const struct sockaddr*)env.addrinfo->ai_addr, addrlen) != -1) {
+	if (sendto(env.soc, &env.to_send, sizeof(env.to_send), 0, (const struct sockaddr*)env.addrinfo.ai_addr, addrlen) != -1) {
 
 	} else {
 		perror("sendto"); exit(EXIT_FAILURE);
@@ -38,14 +38,24 @@ void	store_result(const struct buffer *ptr, struct data *packets)
 {
 	struct timeval		time;
 	struct hostent		*p;
-	uint16_t		seq = ptr->icmp.un.echo.sequence - 1; 
+	char				*name = NULL;
+	uint16_t			seq = ptr->icmp.un.echo.sequence; 
+	size_t				len = 0;
 
 	gettimeofday(&time, NULL);
-
 	packets[seq].value = (double)handle_timer(&time, &packets[seq].send) / 1000;
 	packets[seq].s_addr = env.to_recv.ip.ip_src.s_addr;
-	packets[seq].name = (p = gethostbyaddr(&env.to_recv.ip.ip_src.s_addr, 8, AF_INET)) ? p->h_name : inet_ntoa(env.to_recv.ip.ip_src); 
-	packets[seq].ip = inet_ntoa(env.to_recv.ip.ip_src);
+	if ((p = gethostbyaddr(&env.to_recv.ip.ip_src.s_addr, 8, AF_INET))) {
+		len = ft_strlen(p->h_name);
+	} else {
+		name = inet_ntoa(env.to_recv.ip.ip_src);
+		len = ft_strlen(name);
+	}
+	if (p)
+		ft_memcpy(packets[seq].name, p->h_name, (len > NAME_LEN) ? NAME_LEN : len);
+	else
+		ft_memcpy(packets[seq].name, name, (len > NAME_LEN) ? NAME_LEN : len);
+	ft_memcpy(packets[seq].ip, inet_ntoa(env.to_recv.ip.ip_src), IP_LEN);
 }
 
 void	print_result(const struct data *packets, uint32_t seq)
@@ -56,7 +66,13 @@ void	print_result(const struct data *packets, uint32_t seq)
 	while (++i < seq)
 	{
 		t = i * 3;
-		printf("%d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
+		if (packets[t].value == 0) {
+			printf("%d  * * *\n");
+		} else {
+				printf("%d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
+				if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == packets[t].s_addr)
+						break ;
+		}
 	}
 /*
 	if (save[0].s_addr == save[1].s_addr && save[0].s_addr == save[2].s_addr) {
@@ -79,7 +95,7 @@ void	loop_exec(void)
 	uint32_t	seq = 1;
 	fd_set		read, write;
 	struct timeval	timeout = {
-		.tv_sec = 3, .tv_usec = 0,
+		.tv_sec = 1, .tv_usec = 0,
 	};
 
 	if ((packets = ft_memalloc(sizeof(struct data) * seq_total)) == NULL) {
@@ -101,13 +117,13 @@ void	loop_exec(void)
 			}
 			else if (FD_ISSET(env.soc, &read)) {
 				ft_bzero(&env.to_recv, sizeof(struct buffer));
-				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, env.addrinfo->ai_addr, &env.addrinfo->ai_addrlen) != -1) {
+				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, 0, NULL) != -1) {
 					if (env.to_recv.icmp.type == ICMP_TIME_EXCEEDED) {
 						store_result(((void*)env.to_recv.data), packets);
-						printf("%d ICMP_TIME_EXCEEDED %s\n", ((struct buffer*)env.to_recv.data)->icmp.un.echo.sequence, inet_ntoa(env.to_recv.ip.ip_src));
+//						printf("%d ICMP_TIME_EXCEEDED %s\n", ((struct buffer*)env.to_recv.data)->icmp.un.echo.sequence, inet_ntoa(env.to_recv.ip.ip_src));
 					} else if (env.to_recv.icmp.type == ICMP_ECHOREPLY) {
 						store_result((void*)&env.to_recv, packets);
-						printf("%d ICMP_ECHOREPLY %s\n", env.to_recv.icmp.un.echo.sequence, inet_ntoa(env.to_recv.ip.ip_src));
+//						printf("%d ICMP_ECHOREPLY %s\n", env.to_recv.icmp.un.echo.sequence, inet_ntoa(env.to_recv.ip.ip_src));
 						//return ;
 					} else {
 						ft_putendl("UNKNOWN");
@@ -132,7 +148,7 @@ int main(int argc, char **argv)
 	get_options(argc, argv);
 	init_env_socket(env.domain);
 	ft_bzero(&env.to_send, sizeof(env.to_send));
-	init_iphdr(&env.to_send.ip, &((struct sockaddr_in*)env.addrinfo->ai_addr)->sin_addr);
+	init_iphdr(&env.to_send.ip, &((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr);
 	init_icmphdr(&env.to_send.icmp);
 	init_receive_buffer();
 	env.send_packet = 0;
@@ -140,7 +156,7 @@ int main(int argc, char **argv)
 		perror("gettimeofday "); exit(EXIT_FAILURE);
 	}
 	printf("traceroute to %s (%s), %u hops max, 60 byte packets\n", env.domain,\
-		inet_ntoa(((struct sockaddr_in*)(env.addrinfo->ai_addr))->sin_addr),\
+		inet_ntoa(((struct sockaddr_in*)(env.addrinfo.ai_addr))->sin_addr),\
 		env.flag.hops);
 	loop_exec();
 	return (EXIT_SUCCESS);
