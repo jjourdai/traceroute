@@ -28,14 +28,17 @@
 
 # define DATA_STR "065465406540545640560465046540654"
 # define COUNT_OF(ptr) (sizeof(ptr) / sizeof((ptr)[0]))
-# define USAGE "Usage: ping [-h] destination\n"
+# define USAGE "Usage: traceroute [-h] destination\n"
+# define ERR_HOPS "first hop out of range\n"
+# define TOO_MANY_HOPS "max hops cannot be more than 255\n"
 
 # define HOPS_MAX 30
 # define TRUE 1
 # define FALSE 0
 
 enum	options {
-	HELP = (1 << 2),
+	HELP = (1 << 0),
+	MAX = (1 << 1),
 	DOMAIN,
 };
 
@@ -46,6 +49,8 @@ struct buffer {
 }__attribute__((packed));
 
 struct data {
+	struct timeval send;
+//	struct timeval recv;
 	unsigned long	s_addr;
 	double		value;
 	char		*name;
@@ -66,6 +71,7 @@ struct traceroute {
 	struct msghdr	msg;
 	struct {
 		uint8_t	value;
+		uint16_t hops;
 	} flag;
 };
 
@@ -86,7 +92,7 @@ struct traceroute env;
 /* params.c */
 t_list	*get_params(char **argv, int argc, uint8_t *flag);
 char	*get_targeted_domain(t_list *params); 
-int		get_ttl(t_list *params); 
+uint64_t	get_ttl(t_list *params); 
 void	get_options(int argc, char **argv);
 
 /* display_recv_packet.c */

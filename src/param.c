@@ -15,7 +15,7 @@
 void	longname_opt(char *str)
 {
 	(void)str;
-	fprintf(stderr, "ping: function not inplemented\n");
+	fprintf(stderr, "traceroute: function not inplemented\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -30,6 +30,7 @@ static t_parameters *store_parameters(char *str, enum options flag)
 
 static struct params_getter options[] = {
 	{"help", 'h', HELP, NULL},
+	{"max", 'm', MAX, store_parameters},
 };
 
 t_list		*get_params(char **argv, int argc, uint8_t *flag)
@@ -67,7 +68,7 @@ t_list		*get_params(char **argv, int argc, uint8_t *flag)
 									options[index].f(argv[++i],\
 									options[index].code), sizeof(t_parameters));
 							else {
-									fprintf(stderr, "ping: option requires an argument -- '%c'\n", c);
+									fprintf(stderr, "traceroute: option requires an argument -- '%c'\n", c);
 									exit(EXIT_FAILURE);
 							}
 						}
@@ -75,7 +76,7 @@ t_list		*get_params(char **argv, int argc, uint8_t *flag)
 					}
 				}
 				if (flag_has_found != 1) {
-					fprintf(stderr, "ping: invalid option -- '%c'\n", c);
+					fprintf(stderr, "traceroute: invalid option -- '%c'\n", c);
 					exit(EXIT_FAILURE);
 				} else
 					break ;
@@ -90,6 +91,7 @@ t_list		*get_params(char **argv, int argc, uint8_t *flag)
 void	get_options(int argc, char **argv)
 {
 	char *ip_addr;
+	uint64_t hops = 0;
 	t_list	*parameters;
 
 	ft_bzero(&env, sizeof(env));
@@ -97,6 +99,12 @@ void	get_options(int argc, char **argv)
 	if (env.flag.value & HELP || (ip_addr = get_targeted_domain(parameters)) == NULL) {
 		fprintf(stderr, USAGE); exit(EXIT_FAILURE);
 	}
+	if (env.flag.value & MAX && (hops = get_ttl(parameters)) == 0) {
+		fprintf(stderr, ERR_HOPS); exit(EXIT_FAILURE);
+	} else if (hops > 255) {
+		fprintf(stderr, TOO_MANY_HOPS); exit(EXIT_FAILURE);
+	}
+	env.flag.hops = (hops > 0) ? hops : HOPS_MAX;	
 	env.pid = getpid();
 	env.domain = ip_addr;
 	list_remove(&parameters, remove_content);
