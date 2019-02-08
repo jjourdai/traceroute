@@ -19,14 +19,13 @@ void	longname_opt(char *str)
 	exit(EXIT_FAILURE);
 }
 
-t_parameters *store_parameters(char *str, enum options flag)
+static t_parameters *store_parameters(char *str, enum options flag)
 {
-	t_parameters *new_param;
+	static t_parameters new_param;
 
-	new_param = ft_memalloc(sizeof(t_parameters));
-	new_param->str = str;
-	new_param->code = flag;
-	return (new_param);
+	new_param.str = str;
+	new_param.code = flag;
+	return (&new_param);
 }
 
 static struct params_getter options[] = {
@@ -96,7 +95,7 @@ void	get_options(int argc, char **argv)
 	ft_bzero(&env, sizeof(env));
 	parameters = get_params(argv, argc, &env.flag.value);
 	if (env.flag.value & HELP || (ip_addr = get_targeted_domain(parameters)) == NULL) {
-			fprintf(stderr, USAGE); exit(EXIT_FAILURE);
+		fprintf(stderr, USAGE); exit(EXIT_FAILURE);
 	}
 	env.pid = getpid();
 	env.domain = ip_addr;

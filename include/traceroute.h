@@ -47,7 +47,9 @@ struct buffer {
 
 struct data {
 	unsigned long	s_addr;
-	double			value;
+	double		value;
+	char		*name;
+	char		*ip;
 };
 
 struct traceroute {

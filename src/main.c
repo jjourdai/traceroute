@@ -1,4 +1,5 @@
 #include "traceroute.h"
+#include "colors.h"
 
 /* sysctl -w net.ipv4.ping_group_range="0 0" */
 
@@ -29,26 +30,28 @@ void	is_root(void)
 void	store_result(const struct buffer *ptr, struct data *save, struct timeval *stamp)
 {
 	struct timeval		time;
+	struct hostent		*p;
+	uint16_t		seq = ptr->icmp.un.echo.sequence - 1; 
 
 	gettimeofday(&time, NULL);
-	save[ptr->icmp.un.echo.sequence - 1].value = (double)handle_timer(&time, &stamp[ptr->icmp.un.echo.sequence - 1]) / 1000;
-	save[ptr->icmp.un.echo.sequence - 1].s_addr = env.to_recv.ip.ip_src.s_addr;
+	save[seq].value = (double)handle_timer(&time, &stamp[seq]) / 1000;
+	save[seq].s_addr = env.to_recv.ip.ip_src.s_addr;
+	save[seq].name = (p = gethostbyaddr(&env.to_recv.ip.ip_src.s_addr, 8, AF_INET)) ? p->h_name : inet_ntoa(env.to_recv.ip.ip_src); 
+	save[seq].ip = inet_ntoa(env.to_recv.ip.ip_src);
 }
 
 void	print_result(const struct data *save, uint32_t count)
 {
-	struct hostent *p;
-	int				i = 0;
-
 	if (save[0].s_addr == save[1].s_addr && save[0].s_addr == save[2].s_addr) {
-		if ((p = gethostbyaddr(&env.to_recv.ip.ip_src.s_addr, 8, AF_INET))) {
-				printf("%d  %s (%s)  %.3f ms %.3f ms %.3f ms -- ", count, p->h_name, inet_ntoa(env.to_recv.ip.ip_src), (double)save[0].value, (double)save[1].value, (double)save[2].value);
-		} else {
-				printf("%d  %s (%s)  %.3f ms %.3f ms %.3f ms -- ", count, inet_ntoa(env.to_recv.ip.ip_src), inet_ntoa(env.to_recv.ip.ip_src), (double)save[0].value, (double)save[1].value, (double)save[2].value);
-		}	
+		printf("%d  %s (%s)  %.3f ms %.3f ms  %.3f ms", count, save[0].name, save[0].ip, save[0].value, save[1].value, save[2].value);
+	} else if (save[0].s_addr == save[1].s_addr && save[0].s_addr != save[2].s_addr) {
+		printf("%d  %s (%s)  %.3f ms %.3f ms  %s (%s) %.3f ms", count, save[0].name, save[0].ip, save[0].value, save[1].value, save[2].name, save[2].ip, save[2].value);
+	} else if (save[0].s_addr != save[1].s_addr) {
+		printf("%d  %s (%s)  %.3f ms  %s (%s) %.3f ms  %s (%s) %.3f ms", count, save[0].name, save[0].ip, save[0].value, save[1].name, save[1].ip, save[1].value, save[2].name, save[2].ip, save[2].value);
 	} else {
-		ft_putendl("other print");
+		printf("Dwadawdaw");
 	}
+	printf(RED_TEXT("\n%llu %llu %llu\n"), save[0].s_addr, save[1].s_addr, save[2].s_addr); 
 }
 
 void	loop_exec(void)
