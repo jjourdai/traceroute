@@ -8,7 +8,6 @@ struct addrinfo *result_dns(char *domain)
 
 	ft_bzero(&hints, sizeof(hints));
 	hints.ai_family = AF_INET;
-	hints.ai_flags = AI_CANONNAME;
 	if (getaddrinfo(domain, NULL, &hints, &result) != 0) {
 		fprintf(stderr, "ping: unknown host %s\n", domain); exit(EXIT_FAILURE);
 	} else {

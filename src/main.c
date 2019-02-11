@@ -1,8 +1,6 @@
 #include "traceroute.h"
 #include "colors.h"
 
-/* sysctl -w net.ipv4.ping_group_range="0 0" */
-
 uint64_t	handle_timer(const struct timeval *now, const struct timeval *past)
 {
 	uint64_t time = ((now->tv_sec) << 20) | (now->tv_usec);
@@ -15,7 +13,6 @@ void	send_request(struct data *packets, uint32_t seq)
 	socklen_t addrlen = sizeof(struct sockaddr);
 
 	env.to_send.ip.ip_ttl = (seq - 1) / 3 + 1;
-	//printf("%d\n", env.to_send.ip.ip_ttl);
 	env.to_send.icmp.un.echo.sequence = seq - 1; env.to_send.icmp.checksum = 0;
 	env.to_send.icmp.checksum = compute_checksum(&env.to_send.icmp, sizeof(struct buffer) - sizeof(struct ip));
 	gettimeofday(&packets[seq - 1].send, NULL);
@@ -72,28 +69,22 @@ void	print_result(struct data *packets, uint32_t seq)
 	{
 		t = i * 3;
 		fill_string(packets, t);
-		if (packets[t].value == 0) {
+		if (packets[t].value == 0 && packets[t + 1].s_addr == 0 && packets[t + 2].s_addr == 0) {
 			printf("%2d  * * *\n", i + 1);
 		} else {
-	//		printf("%llx %llx %llx\n", packets[t].s_addr, packets[t + 1].s_addr, packets[t + 2].s_addr);
-	//		printf("%s %s %s\n", packets[t].ip, packets[t + 1].ip, packets[t + 2].ip);
-			if (packets[t].s_addr == packets[t + 1].s_addr && packets[t].s_addr == packets[t + 2].s_addr) {
-					printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
-			} else if (packets[t].s_addr == packets[t + 1].s_addr && packets[t].s_addr != packets[t + 2].s_addr) {
-					printf("%2d  %s (%s)  %.3f ms %.3f ms  %s (%s) %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].name, packets[t + 2].ip, packets[t + 2].value);
-			} else if (packets[t].s_addr != packets[t + 1].s_addr) {
-					printf("%2d  %s (%s)  %.3f ms  %s (%s) %.3f ms  %s (%s) %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].name, packets[t + 1].ip, packets[t + 1].value, packets[t + 2].name, packets[t + 2].ip, packets[t + 2].value);
-			} else {
-					printf("Dwadawdaw");
-			}
-//			printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
-			if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == packets[t].s_addr)
+			if (packets[t].s_addr != 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr != 0)
+				printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
+			else if (packets[t].s_addr == 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr != 0)
+				printf("%2d  * %s (%s)  %.3f ms  %.3f ms\n", i + 1, packets[t + 1].name, packets[t + 1].ip, packets[t + 1].value, packets[t + 2].value);
+			else if (packets[t].s_addr != 0 && packets[t + 1].s_addr == 0 && packets[t + 2].s_addr != 0)
+				printf("%2d  %s (%s)  %.3f ms *  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 2].value);
+			else if (packets[t].s_addr != 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr == 0)
+				printf("%2d  %s (%s)  %.3f ms  %.3f ms *\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value);
+			if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == packets[t].s_addr || ((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == 0) {
 					break ;
+			}
 		}
 	}
-/*
-	printf(RED_TEXT("\n%llu %llu %llu\n"), packets[0].s_addr, packets[1].s_addr, packets[2].s_addr); 
-*/
 }
 
 void	loop_exec(void)
@@ -103,9 +94,8 @@ void	loop_exec(void)
 	uint32_t	seq = 1;
 	fd_set		read, write;
 	struct timeval	timeout = {
-		.tv_sec = 3, .tv_usec = 0,
+		.tv_sec = 1, .tv_usec = 0,
 	};
-
 	if ((packets = ft_memalloc(sizeof(struct data) * seq_total)) == NULL) {
 		fprintf(stderr, "Malloc failure\n"); exit(EXIT_FAILURE);
 	}
@@ -115,34 +105,21 @@ void	loop_exec(void)
 			if (seq <= seq_total)
 				FD_SET(env.soc, &write);
 			if (select(env.soc + 1, &read, &write, NULL, &timeout) == 0) {
-				ft_putendl("TIMEOUT");	break ;
+					break ;
 			}
 			if (FD_ISSET(env.soc, &write)) {
 					send_request(packets, seq++);
 			}
 			if (FD_ISSET(env.soc, &read)) {
-			//	ft_putendl("RECV");
 				ft_bzero(&env.to_recv, sizeof(struct buffer));
-				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, 0, NULL) != -1) {
+				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, NULL, NULL) != -1) {
 					if (env.to_recv.icmp.type == ICMP_TIME_EXCEEDED) {
-						store_result(((void*)env.to_recv.data), packets);
-//						printf("%d ICMP_TIME_EXCEEDED %s\n", ((struct buffer*)env.to_recv.data)->icmp.un.echo.sequence, inet_ntoa(env.to_recv.ip.ip_src));
+						store_result(((void*)&env.to_recv.data), packets);
 					} else if (env.to_recv.icmp.type == ICMP_ECHOREPLY) {
 						store_result((void*)&env.to_recv, packets);
-//						printf("%d ICMP_ECHOREPLY %s\n", env.to_recv.icmp.un.echo.sequence, inet_ntoa(env.to_recv.ip.ip_src));
-						//return ;
-					} else {
-						ft_putendl("UNKNOWN");
 					}
 				}
 			}
-/*
-		gettimeofday(&timeout, NULL);
-		if (response_recv == FALSE && timeout.tv_sec - send_timestamp.tv_sec >= 3) {
-			printf("%d  * * *\n", count);
-			response_recv = TRUE;
-		}
-*/
 	}
 	print_result(packets, seq_total / 3);
 	free(packets);

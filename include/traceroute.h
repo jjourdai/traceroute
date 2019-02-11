@@ -96,9 +96,6 @@ char	*get_targeted_domain(t_list *params);
 uint64_t	get_ttl(t_list *params); 
 void	get_options(int argc, char **argv);
 
-/* display_recv_packet.c */
-void	print_receive_packet(void);
-
 /* init.c */
 
 void		init_iphdr(struct ip *ip, struct in_addr *dest);
