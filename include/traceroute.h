@@ -21,6 +21,7 @@
 # include <sys/types.h>
 # include <netinet/in.h>
 # include <netinet/ip_icmp.h>
+# include <netinet/udp.h>
 # include <arpa/inet.h>
 # include <sys/select.h>
 # include <sys/time.h>
@@ -41,12 +42,19 @@
 enum	options {
 	HELP = (1 << 0),
 	MAX = (1 << 1),
+	TCP = (1 << 2),
+	ICMP = (1 << 3),
+	UDP = (1 << 4),
 	DOMAIN,
 };
 
 struct buffer {
 	struct ip		ip;
-	struct icmphdr	icmp;
+	union 
+	{
+		struct icmphdr	icmp;
+		struct udphdr	udp;
+	} un;	
 	uint8_t			data[48];
 }__attribute__((packed));
 
@@ -60,6 +68,7 @@ struct data {
 
 struct traceroute {
 	int				soc;
+	int				proto;
 	uint8_t			send_packet;
 	uint8_t			recv_packet;
 	uint8_t			packet_err;
@@ -100,6 +109,7 @@ void	get_options(int argc, char **argv);
 
 void		init_iphdr(struct ip *ip, struct in_addr *dest);
 void		init_icmphdr(struct icmphdr *icmp);
+void		init_udphdr(struct udphdr *udp);
 void		init_env_socket(char *domain);
 void		init_receive_buffer(void);
 

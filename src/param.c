@@ -31,6 +31,9 @@ static t_parameters *store_parameters(char *str, enum options flag)
 static struct params_getter options[] = {
 	{"help", 'h', HELP, NULL},
 	{"max", 'm', MAX, store_parameters},
+	{"tcp", 'T', TCP, NULL},
+	{"icmp", 'I', ICMP, NULL},
+	{"udp", 'U', UDP, NULL},
 };
 
 t_list		*get_params(char **argv, int argc, uint8_t *flag)
@@ -103,6 +106,13 @@ void	get_options(int argc, char **argv)
 		fprintf(stderr, ERR_HOPS); exit(EXIT_FAILURE);
 	} else if (hops > 255) {
 		fprintf(stderr, TOO_MANY_HOPS); exit(EXIT_FAILURE);
+	}
+	if (env.flag.value & TCP) {
+		env.proto = IPPROTO_TCP;
+	} else if (env.flag.value & UDP) {
+		env.proto = IPPROTO_UDP;
+	} else {
+		env.proto = IPPROTO_ICMP;
 	}
 	env.flag.hops = (hops > 0) ? hops : HOPS_MAX;	
 	env.pid = getpid();

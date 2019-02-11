@@ -25,7 +25,7 @@ void 	init_iphdr(struct ip *ip, struct in_addr *dest)
 	ip->ip_id = 0;
 	ip->ip_off = htons(IP_DF);
 	ip->ip_ttl = 0;
-	ip->ip_p = IPPROTO_ICMP;
+	ip->ip_p = env.proto;
 	ip->ip_sum = 0;
 	inet_pton(AF_INET, "0.0.0.0", &ip->ip_src);
 	ip->ip_dst = *dest;
@@ -39,6 +39,16 @@ void	init_icmphdr(struct icmphdr *icmp)
 	icmp->un.echo.id = env.pid;
 	icmp->un.echo.sequence = 1;
 	icmp->checksum = 0;
+}
+
+void	init_udphdr(struct udphdr *udp)
+{
+	ft_bzero(udp, sizeof(*udp));
+	
+	udp->source = htons(64356);
+	udp->dest = htons(64356);
+	udp->len = htons(sizeof(struct buffer) - sizeof(struct ip));
+	udp->check = 0;
 }
 
 void	init_env_socket(char *domain)
@@ -55,14 +65,6 @@ void	init_env_socket(char *domain)
 			perror("setsockopt"); exit(EXIT_FAILURE);
 		}
 	}
-}
 
-void	init_receive_buffer(void)
-{
-	static struct iovec target;
-
-	target.iov_base = &env.to_recv;
-	target.iov_len = sizeof(env.to_recv);
-	env.msg.msg_iov = &target;
-	env.msg.msg_iovlen = 1;
+//	bind(env.soc, 
 }
