@@ -190,41 +190,58 @@ void	loop_exec_udp(void)
 	struct data	*packets = NULL;
 	uint32_t	seq_total = env.flag.hops * 3;
 	uint32_t	seq = 1;
-	fd_set		read, write;
+	fd_set		read, writefd;
 	struct timeval	timeout = {
 		.tv_sec = 1, .tv_usec = 0,
 	};
 	if ((packets = ft_memalloc(sizeof(struct data) * seq_total)) == NULL) {
 		fprintf(stderr, "Malloc failure\n"); exit(EXIT_FAILURE);
 	}
-	for (;;) {
-			FD_ZERO(&read);	FD_ZERO(&write);
-			FD_SET(env.soc, &read);
-			if (seq <= seq_total)
-				FD_SET(env.soc, &write);
-			if (select(env.soc + 1, &read, &write, NULL, &timeout) == 0) {
-					break ;
-			}
-			if (FD_ISSET(env.soc, &write)) {
-					send_request_udp(packets, seq++);
-			}
-			if (FD_ISSET(env.soc, &read)) {
-				ft_bzero(&env.to_recv, sizeof(struct buffer));
-				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, NULL, NULL) != -1) {
-					printf("%s\n", inet_ntoa(env.to_recv.ip.ip_src));
-					if (env.to_recv.un.icmp.type == ICMP_TIME_EXCEEDED) {
-				//		store_result(((void*)&env.to_recv.data), packets);
-					} else if (env.to_recv.un.icmp.type == ICMP_ECHOREPLY) {
-				//		printf("%s\n", inet_ntoa(env.to_recv.ip.ip_src));
-				//		store_result((void*)&env.to_recv, packets);
-					} else {
-						ft_putendl("END");
-					}
-				}
-			}
+
+	int test = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	printf("%d\n", test);
+	char *str = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_";
+	socklen_t addrlen = sizeof(struct sockaddr);
+	ft_memcpy(&env.to_send.data, str, 32);
+	struct sockaddr_in addr = {
+		.sin_family = AF_INET,
+		.sin_port = 0,
+		.sin_addr = 0,
+	};
+	struct sockaddr_in addr2 = {
+		.sin_family = AF_INET,
+		.sin_port = 22,
+		.sin_addr = inet_addr("216.58.213.174"),
+	};
+	if (bind(test, (const struct sockaddr*)&addr, sizeof(struct sockaddr)) == -1) {
+		perror("bind");
 	}
-	print_result(packets, seq_total / 3);
-	free(packets);
+	int opt_value = 1;
+	if (setsockopt(test, SOL_IP, IP_RECVERR, &opt_value, sizeof(opt_value)) == -1) {
+		perror("setsockopt");
+	}
+	opt_value = 1;
+	if (setsockopt(test, SOL_IP, IP_RECVTTL, &opt_value, sizeof(opt_value)) == -1) {
+		perror("setsockopt");
+	}
+	opt_value = 6;
+	if (setsockopt(test, SOL_IP, IP_TTL, &opt_value, sizeof(opt_value)) == -1) {
+		perror("setsockopt");
+	}
+	if (sendto(test, &env.to_send.data, sizeof(env.to_send.data), 0, (const struct sockaddr*)&addr2, addrlen) == -1) {
+		perror("ERROR ");
+	}
+	
+	ft_bzero(&env.to_recv, sizeof(env.to_recv));
+	if (recvfrom(test, &env.to_recv, sizeof(struct buffer), 0, NULL, NULL) != -1) {
+		ft_putendl("dwalhdawkdjaw");
+	} else {
+		perror("recfrom ");
+		if (env.to_recv.un.icmp.type == ICMP_TIME_EXCEEDED) {
+			ft_putendl("ICMP_TIME_EXCEEDED");
+		}
+	}
+	exit(0);
 }
 
 int main(int argc, char **argv)

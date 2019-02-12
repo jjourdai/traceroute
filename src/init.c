@@ -23,7 +23,7 @@ void 	init_iphdr(struct ip *ip, struct in_addr *dest)
 	ip->ip_tos = 0;
 	ip->ip_len = htons(sizeof(struct buffer));
 	ip->ip_id = env.pid;
-	ip->ip_off = 0;
+	ip->ip_off = htons(IP_DF);
 	ip->ip_ttl = 0;
 	ip->ip_p = env.proto;
 	ip->ip_sum = 0;
@@ -45,14 +45,35 @@ void	init_udphdr(struct udphdr *udp)
 {
 	ft_bzero(udp, sizeof(*udp));
 	
-	udp->source = htons(64356);
-	udp->dest = htons(64356);
+	udp->source = htons(255);
+	udp->dest = htons(20000);
 	udp->len = htons(sizeof(struct buffer) - sizeof(struct ip));
 	udp->check = 0;
 }
 
 void	init_env_socket(char *domain)
 {
+
+/*		
+#include <ifaddrs.h>
+struct ifaddrs *addrs;
+struct ifaddrs *tmp;
+	getifaddrs(&addrs);
+
+tmp = addrs;
+while (tmp) 
+{
+    if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_INET)
+    {
+        struct sockaddr_in *pAddr = (struct sockaddr_in *)tmp->ifa_addr;
+        printf("%s: %s\n", tmp->ifa_name, inet_ntoa(pAddr->sin_addr));
+    }
+
+    tmp = tmp->ifa_next;
+}
+
+freeifaddrs(addrs);
+*/
 	ft_memcpy(&env.addrinfo, result_dns(domain), sizeof(struct addrinfo));
 	if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == INADDR_BROADCAST) {
 		fprintf(stderr, "Do you want to ping broadcast? but No\n"); exit(EXIT_FAILURE);
@@ -65,6 +86,4 @@ void	init_env_socket(char *domain)
 			perror("setsockopt"); exit(EXIT_FAILURE);
 		}
 	}
-
-//	bind(env.soc, 
 }
