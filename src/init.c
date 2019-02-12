@@ -45,8 +45,8 @@ void	init_udphdr(struct udphdr *udp)
 {
 	ft_bzero(udp, sizeof(*udp));
 	
-	udp->source = htons(64356);
-	udp->dest = htons(64356);
+	udp->source = 0;
+	udp->dest = 0;
 	udp->len = htons(sizeof(struct buffer) - sizeof(struct ip));
 	udp->check = 0;
 }

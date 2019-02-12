@@ -154,8 +154,13 @@ void	send_request_udp(struct data *packets, uint32_t seq)
 	
 	char *str = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_";
 
-	env.to_send.ip.ip_src.s_addr = inet_addr("10.16.239.165");
+	env.to_send.ip.ip_src.s_addr = inet_addr("172.17.0.2");
 
+static int port = 33435;	
+
+	
+	env.to_send.un.udp.dest = ntohs(port);
+	port++;
 	ft_bzero(&psd, sizeof(struct psdhdr));
 	ft_memcpy(&env.to_send.data, str, 32);
 	ft_memcpy(&psd.data, &env.to_send.data, 32);
@@ -172,6 +177,7 @@ void	send_request_udp(struct data *packets, uint32_t seq)
 	env.to_send.ip.ip_ttl = (seq - 1) / 3 + 1;
 //	env.to_send.un.udp.check = htons(0x9eb8);
 	env.to_send.un.udp.check = compute_checksum(&psd, sizeof(struct psdhdr));
+	//env.to_send.un.udp.dest++;
 	//env.to_send.un.udp.check = compute_checksum(&psd, sizeof(struct psdhdr));
 
 //	printf("%llx\n", psd.dest_ip);
