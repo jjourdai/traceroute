@@ -55,7 +55,7 @@ struct buffer {
 		struct icmphdr	icmp;
 		struct udphdr	udp;
 	} un;	
-	uint8_t			data[48];
+	uint8_t			data[32];
 }__attribute__((packed));
 
 struct data {

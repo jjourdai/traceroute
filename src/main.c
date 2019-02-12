@@ -11,7 +11,7 @@ uint64_t	handle_timer(const struct timeval *now, const struct timeval *past)
 void	send_request_icmp(struct data *packets, uint32_t seq)
 {
 	socklen_t addrlen = sizeof(struct sockaddr);
-
+	
 	env.to_send.ip.ip_ttl = (seq - 1) / 3 + 1;
 	env.to_send.un.icmp.un.echo.sequence = seq - 1; env.to_send.un.icmp.checksum = 0;
 	env.to_send.un.icmp.checksum = compute_checksum(&env.to_send.un.icmp, sizeof(struct buffer) - sizeof(struct ip));
@@ -125,35 +125,58 @@ void	loop_exec_icmp(void)
 	free(packets);
 }
 
-struct psdhdr
-     {
+struct psdhdr {
     unsigned long	 src_ip;
     unsigned long 	dest_ip;
     char 			mbz;
     char 			proto; // Type de protocole (6->TCP et 17->le mode non connecte)
     unsigned short 	length; // htons( Entete TCP ou non connecte + Data )
 	struct udphdr 	udp;
-	uint8_t			data[48];
-};
+	uint8_t			data[32];
+//};
+}__attribute__((packed));
+
 void	send_request_udp(struct data *packets, uint32_t seq)
 {
+
 /*
+ 	pseudo.ip_source=ip_source_tampon;
+     pseudo.ip_destination=ip_destination_tampon;
+     pseudo.mbz=0;
+     pseudo.type=17;
+     pseudo.length=htons((unsigned short)(sizeof(struct entete)+(unsigned short)strlen(data_tampon)));
+     memcpy(tampon,&pseudo,sizeof(pseudo));
+     memcpy(tampon+sizeof(pseudo),&Tampon,sizeof(struct entete));
+     memcpy(tampon+sizeof(pseudo)+sizeof(struct entete),data_tampon,strlen(data_tampon));
+     checksum=calcul_du_checksum(liberation,(unsigned short*)tampon,sizeof(pseudo)+sizeof(struct entete)+strlen(data_tampon));
+*/
 	struct psdhdr psd;
 	
+	char *str = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_";
+
+	env.to_send.ip.ip_src.s_addr = inet_addr("10.16.239.165");
+
 	ft_bzero(&psd, sizeof(struct psdhdr));
-	psd.mbz = 0,
-	psd.proto = IPPROTO_UDP,
-	psd.length = htons(sizeof(struct buffer) - sizeof(struct ip)),
-	psd.src_ip = env.to_send.ip.ip_src.s_addr,
-	psd.dest_ip = env.to_send.ip.ip_dst.s_addr,
-	psd.udp = env.to_send.un.udp;
-*/
+	ft_memcpy(&env.to_send.data, str, 32);
+	ft_memcpy(&psd.data, &env.to_send.data, 32);
+	psd.src_ip = env.to_send.ip.ip_src.s_addr;
+	psd.dest_ip = env.to_send.ip.ip_dst.s_addr;
+	psd.mbz = 0;
+	psd.proto = IPPROTO_UDP;
+	psd.length = htons(sizeof(struct udphdr) + 32);
+	env.to_send.un.udp.check = 0;
+	ft_memcpy(&psd.udp, &env.to_send.un.udp, sizeof(struct udphdr));
+	
 	socklen_t addrlen = sizeof(struct sockaddr);
 
 	env.to_send.ip.ip_ttl = (seq - 1) / 3 + 1;
-//	env.to_send.un.icmp.un.echo.sequence = seq - 1; 
-	env.to_send.un.udp.check = 0;
-	env.to_send.un.udp.check = compute_checksum(&env.to_send.un.udp, sizeof(struct buffer) - sizeof(struct ip));
+//	env.to_send.un.udp.check = htons(0x9eb8);
+	env.to_send.un.udp.check = compute_checksum(&psd, sizeof(struct psdhdr));
+	//env.to_send.un.udp.check = compute_checksum(&psd, sizeof(struct psdhdr));
+
+//	printf("%llx\n", psd.dest_ip);
+//	printf("%llx\n", psd.src_ip);
+//	printf("checksum %llx\n", env.to_send.un.udp.check);
 	gettimeofday(&packets[seq - 1].send, NULL);
 	if (sendto(env.soc, &env.to_send, sizeof(env.to_send), 0, (const struct sockaddr*)env.addrinfo.ai_addr, addrlen) != -1) {
 
@@ -189,14 +212,14 @@ void	loop_exec_udp(void)
 				ft_bzero(&env.to_recv, sizeof(struct buffer));
 				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, NULL, NULL) != -1) {
 					printf("%s\n", inet_ntoa(env.to_recv.ip.ip_src));
-/*
 					if (env.to_recv.un.icmp.type == ICMP_TIME_EXCEEDED) {
-						store_result(((void*)&env.to_recv.data), packets);
+				//		store_result(((void*)&env.to_recv.data), packets);
 					} else if (env.to_recv.un.icmp.type == ICMP_ECHOREPLY) {
-						printf("%s\n", inet_ntoa(env.to_recv.ip.ip_src));
-						store_result((void*)&env.to_recv, packets);
+				//		printf("%s\n", inet_ntoa(env.to_recv.ip.ip_src));
+				//		store_result((void*)&env.to_recv, packets);
+					} else {
+						ft_putendl("END");
 					}
-*/
 				}
 			}
 	}

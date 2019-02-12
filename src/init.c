@@ -22,8 +22,8 @@ void 	init_iphdr(struct ip *ip, struct in_addr *dest)
 	ip->ip_hl = sizeof(struct ip) >> 2;
 	ip->ip_tos = 0;
 	ip->ip_len = htons(sizeof(struct buffer));
-	ip->ip_id = 0;
-	ip->ip_off = htons(IP_DF);
+	ip->ip_id = env.pid;
+	ip->ip_off = 0;
 	ip->ip_ttl = 0;
 	ip->ip_p = env.proto;
 	ip->ip_sum = 0;
