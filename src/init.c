@@ -24,10 +24,10 @@ void 	init_iphdr(struct ip *ip, struct in_addr *dest)
 	ip->ip_len = htons(sizeof(struct buffer));
 	ip->ip_id = env.pid;
 	ip->ip_off = 0;
+	ip->ip_src.s_addr = 0;
 	ip->ip_ttl = 0;
 	ip->ip_p = env.proto;
 	ip->ip_sum = 0;
-	inet_pton(AF_INET, "0.0.0.0", &ip->ip_src);
 	ip->ip_dst = *dest;
 }
 
@@ -65,6 +65,4 @@ void	init_env_socket(char *domain)
 			perror("setsockopt"); exit(EXIT_FAILURE);
 		}
 	}
-
-//	bind(env.soc, 
 }

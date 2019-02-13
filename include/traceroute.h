@@ -26,12 +26,14 @@
 # include <sys/select.h>
 # include <sys/time.h>
 # include <netdb.h>
+# include <ifaddrs.h>
 
 # define DATA_STR "065465406540545640560465046540654"
 # define COUNT_OF(ptr) (sizeof(ptr) / sizeof((ptr)[0]))
 # define USAGE "Usage: traceroute [-h] destination\n"
 # define ERR_HOPS "first hop out of range\n"
 # define TOO_MANY_HOPS "max hops cannot be more than 255\n"
+# define PORT 33435
 
 # define HOPS_MAX 30
 # define TRUE 1

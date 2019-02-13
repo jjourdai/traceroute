@@ -42,6 +42,17 @@ void	store_result(const struct buffer *ptr, struct data *packets)
 	ft_memcpy(packets[seq].ip, inet_ntoa(env.to_recv.ip.ip_src), IP_LEN);
 }
 
+void	store_result_udp(const struct buffer *ptr, struct data *packets)
+{
+	struct timeval		time;
+	uint16_t			seq = ntohs(ptr->un.udp.dest) - PORT; 
+
+	gettimeofday(&time, NULL);
+	packets[seq].value = (double)handle_timer(&time, &packets[seq].send) / 1000;
+	packets[seq].s_addr = env.to_recv.ip.ip_src.s_addr;
+	ft_memcpy(packets[seq].ip, inet_ntoa(env.to_recv.ip.ip_src), IP_LEN);
+}
+
 void	fill_string(struct data *packets, uint32_t t)
 {
 	uint32_t i = 0;
@@ -70,16 +81,27 @@ void	print_result(struct data *packets, uint32_t seq)
 		t = i * 3;
 		fill_string(packets, t);
 		if (packets[t].value == 0 && packets[t + 1].s_addr == 0 && packets[t + 2].s_addr == 0) {
-			printf("%2d  * * *\n", i + 1);
+				printf("%2d  * * *\n", i + 1);
 		} else {
-			if (packets[t].s_addr != 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr != 0)
-				printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
-			else if (packets[t].s_addr == 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr != 0)
-				printf("%2d  * %s (%s)  %.3f ms  %.3f ms\n", i + 1, packets[t + 1].name, packets[t + 1].ip, packets[t + 1].value, packets[t + 2].value);
-			else if (packets[t].s_addr != 0 && packets[t + 1].s_addr == 0 && packets[t + 2].s_addr != 0)
-				printf("%2d  %s (%s)  %.3f ms *  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 2].value);
-			else if (packets[t].s_addr != 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr == 0)
-				printf("%2d  %s (%s)  %.3f ms  %.3f ms *\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value);
+			if (env.proto == IPPROTO_UDP) {
+				if (packets[t].s_addr == packets[t + 1].s_addr && packets[t].s_addr == packets[t + 2].s_addr)
+					printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
+				else if (packets[t].s_addr == packets[t + 1].s_addr && packets[t].s_addr != packets[t + 2].s_addr)
+					printf("%2d  %s (%s)  %.3f ms %.3f ms %s (%s)  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].name, packets[t + 2].ip, packets[t + 2].value);
+				else if (packets[t].s_addr != packets[t + 1].s_addr && packets[t].s_addr != packets[t + 2].s_addr && packets[t + 2].s_addr == packets[t + 1].s_addr)
+					printf("%2d  %s (%s)  %.3f ms %s (%s)  %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].name, packets[t + 1].ip, packets[t + 1].value, packets[t + 2].value);
+				else if (packets[t].s_addr != packets[t + 1].s_addr && packets[t].s_addr != packets[t + 2].s_addr && packets[t + 2].s_addr != packets[t + 1].s_addr)
+						printf("%2d  %s (%s)  %.3f ms %s (%s)  %.3f ms %s (%s)  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].name, packets[t + 1].ip, packets[t + 1].value, packets[t + 2].name, packets[t + 2].ip, packets[t + 2].value);
+			} else if (env.proto == IPPROTO_ICMP) {
+				if (packets[t].s_addr != 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr != 0)
+					printf("%2d  %s (%s)  %.3f ms %.3f ms  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value, packets[t + 2].value);
+				else if (packets[t].s_addr == 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr != 0)
+					printf("%2d  * %s (%s)  %.3f ms  %.3f ms\n", i + 1, packets[t + 1].name, packets[t + 1].ip, packets[t + 1].value, packets[t + 2].value);
+				else if (packets[t].s_addr != 0 && packets[t + 1].s_addr == 0 && packets[t + 2].s_addr != 0)
+					printf("%2d  %s (%s)  %.3f ms *  %.3f ms\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 2].value);
+				else if (packets[t].s_addr != 0 && packets[t + 1].s_addr != 0 && packets[t + 2].s_addr == 0)
+					printf("%2d  %s (%s)  %.3f ms  %.3f ms *\n", i + 1, packets[t].name, packets[t].ip, packets[t].value, packets[t + 1].value);
+			}
 			if (((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == packets[t].s_addr || ((struct sockaddr_in*)env.addrinfo.ai_addr)->sin_addr.s_addr == 0) {
 					break ;
 			}
@@ -133,34 +155,15 @@ struct psdhdr {
     unsigned short 	length; // htons( Entete TCP ou non connecte + Data )
 	struct udphdr 	udp;
 	uint8_t			data[32];
-//};
 }__attribute__((packed));
 
 void	send_request_udp(struct data *packets, uint32_t seq)
 {
-
-/*
- 	pseudo.ip_source=ip_source_tampon;
-     pseudo.ip_destination=ip_destination_tampon;
-     pseudo.mbz=0;
-     pseudo.type=17;
-     pseudo.length=htons((unsigned short)(sizeof(struct entete)+(unsigned short)strlen(data_tampon)));
-     memcpy(tampon,&pseudo,sizeof(pseudo));
-     memcpy(tampon+sizeof(pseudo),&Tampon,sizeof(struct entete));
-     memcpy(tampon+sizeof(pseudo)+sizeof(struct entete),data_tampon,strlen(data_tampon));
-     checksum=calcul_du_checksum(liberation,(unsigned short*)tampon,sizeof(pseudo)+sizeof(struct entete)+strlen(data_tampon));
-*/
 	struct psdhdr psd;
 	
 	char *str = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_";
-
-	env.to_send.ip.ip_src.s_addr = inet_addr("172.17.0.2");
-
-static int port = 33435;	
-
-	
+	static int port = 33435;
 	env.to_send.un.udp.dest = ntohs(port);
-	port++;
 	ft_bzero(&psd, sizeof(struct psdhdr));
 	ft_memcpy(&env.to_send.data, str, 32);
 	ft_memcpy(&psd.data, &env.to_send.data, 32);
@@ -175,15 +178,11 @@ static int port = 33435;
 	socklen_t addrlen = sizeof(struct sockaddr);
 
 	env.to_send.ip.ip_ttl = (seq - 1) / 3 + 1;
-//	env.to_send.un.udp.check = htons(0x9eb8);
-	env.to_send.un.udp.check = compute_checksum(&psd, sizeof(struct psdhdr));
-	//env.to_send.un.udp.dest++;
 	//env.to_send.un.udp.check = compute_checksum(&psd, sizeof(struct psdhdr));
+	env.to_send.un.udp.check = 0;
 
-//	printf("%llx\n", psd.dest_ip);
-//	printf("%llx\n", psd.src_ip);
-//	printf("checksum %llx\n", env.to_send.un.udp.check);
-	gettimeofday(&packets[seq - 1].send, NULL);
+	gettimeofday(&packets[port - PORT].send, NULL);
+	port++;
 	if (sendto(env.soc, &env.to_send, sizeof(env.to_send), 0, (const struct sockaddr*)env.addrinfo.ai_addr, addrlen) != -1) {
 
 	} else {
@@ -217,14 +216,14 @@ void	loop_exec_udp(void)
 			if (FD_ISSET(env.soc, &read)) {
 				ft_bzero(&env.to_recv, sizeof(struct buffer));
 				if (recvfrom(env.soc, &env.to_recv, sizeof(struct buffer), 0, NULL, NULL) != -1) {
-					printf("%s\n", inet_ntoa(env.to_recv.ip.ip_src));
 					if (env.to_recv.un.icmp.type == ICMP_TIME_EXCEEDED) {
-				//		store_result(((void*)&env.to_recv.data), packets);
-					} else if (env.to_recv.un.icmp.type == ICMP_ECHOREPLY) {
-				//		printf("%s\n", inet_ntoa(env.to_recv.ip.ip_src));
-				//		store_result((void*)&env.to_recv, packets);
+						store_result_udp(((void*)&env.to_recv.data), packets);
+					} else if (env.to_recv.un.icmp.type == ICMP_DEST_UNREACH) {
+						store_result_udp(((void*)&env.to_recv.data), packets);
 					} else {
-						ft_putendl("END");
+						ft_putendl("ERROR");
+						printf("%d\n", env.to_recv.ip.ip_p);
+						printf("%d\n", env.to_recv.un.icmp.type);
 					}
 				}
 			}

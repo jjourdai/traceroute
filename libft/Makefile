@@ -51,7 +51,7 @@ NAME = libft.a
 
 CC = gcc
 
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -fsanitize=address -g 
 
 OBJ_NAME = $(SRC_NAME:.c=.o)
 
