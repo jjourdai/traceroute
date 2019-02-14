@@ -61,9 +61,9 @@ void	init_tcphdr(struct tcphdr *tcp)
 	tcp->th_ack = 0;
 	tcp->th_off = sizeof(struct tcphdr) >> 2;
 	tcp->th_flags = TH_SYN;
-	tcp->th_win = 0; //
-	tcp->th_sum = 0; //
-	tcp->th_urp = 0; //
+	tcp->th_win = 0;
+	tcp->th_sum = 0;
+	tcp->th_urp = 0;
 }
 
 void	init_env_socket(char *domain)

@@ -18,28 +18,24 @@ void	store_result_tcp(const struct buffer *ptr, struct data *packets, int result
 
 void	send_request_tcp(struct data *packets, uint32_t seq, int FIN)
 {
-	char *str = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_";
 	static int port = HTTP_PORT;
 	
-	if (FIN == 0)
+	if (FIN == 0) {
 		init_tcphdr(&env.to_send.un.tcp);
-	else {
+		gettimeofday(&packets[seq - 1].send, NULL);
+	} else {
 		env.to_send.un.tcp.th_flags = TH_RST;
 	}
 	env.to_send.un.tcp.th_dport = htons(port);
 	env.to_send.un.tcp.th_seq = htons(seq);
-	ft_memcpy(&env.to_send.data, str, 32);
 	socklen_t addrlen = sizeof(struct sockaddr);
 	env.to_send.ip.ip_ttl = (seq - 1) / 3 + 1;
-	if (FIN == 0)
-	gettimeofday(&packets[seq - 1].send, NULL);
 	if (sendto(env.soc, &env.to_send, sizeof(env.to_send), 0, (const struct sockaddr*)env.addrinfo.ai_addr, addrlen) != -1) {
 
 	} else {
 		perror("sendto"); exit(EXIT_FAILURE);
 	}
 }
-
 
 void	loop_exec_tcp(void)
 {
@@ -50,19 +46,14 @@ void	loop_exec_tcp(void)
 	struct timeval	timeout = {
 		.tv_sec = 1, .tv_usec = 0,
 	};
-	int tcp_sock;
+	int			is_open = TRUE, tcp_sock;
 
 	if ((tcp_sock = socket(PF_INET, SOCK_RAW, IPPROTO_TCP)) == -1) {
 		perror("socket "); exit(EXIT_FAILURE);
 	}
-	int opt_value = 1;
-	if (setsockopt(tcp_sock, IPPROTO_IP, IP_HDRINCL, &opt_value, sizeof(opt_value)) < 0) {
-			perror("setsockopt"); exit(EXIT_FAILURE);
-	}
 	if ((packets = ft_memalloc(sizeof(struct data) * seq_total)) == NULL) {
 		fprintf(stderr, "Malloc failure\n"); exit(EXIT_FAILURE);
 	}
-	int test = TRUE;
 	for (;;) {
 			FD_ZERO(&read);	FD_ZERO(&write);
 			FD_SET(env.soc, &read);
@@ -73,12 +64,10 @@ void	loop_exec_tcp(void)
 					break ;
 			}
 			if (FD_ISSET(env.soc, &write)) {
-					if (test == TRUE) {
-						send_request_tcp(packets, seq, 0);
-						test = FALSE;
+					if (is_open == TRUE) {
+						send_request_tcp(packets, seq, 0); is_open = FALSE;
 					} else {
-						send_request_tcp(packets, seq++, 1);
-						test = TRUE;
+						send_request_tcp(packets, seq++, 1); is_open = TRUE;
 					}
 			}
 			if (FD_ISSET(env.soc, &read)) {

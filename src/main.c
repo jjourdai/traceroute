@@ -112,7 +112,6 @@ int main(int argc, char **argv)
 	} else {
 		init_icmphdr(&env.to_send.un.icmp);
 	}
-
 	env.send_packet = 0;
 	if (gettimeofday(&env.time, NULL) == -1) {
 		perror("gettimeofday "); exit(EXIT_FAILURE);

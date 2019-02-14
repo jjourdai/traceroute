@@ -31,7 +31,10 @@
 
 # define DATA_STR "065465406540545640560465046540654"
 # define COUNT_OF(ptr) (sizeof(ptr) / sizeof((ptr)[0]))
-# define USAGE "Usage: traceroute [-h] destination\n"
+# define USAGE "Usage: traceroute [-hIUT] destination\n"\
+				"-I (default) to work with icmp echo_request\n"\
+				"-U to work with udp request\n"\
+				"-T to work with tcp SYN request\n"
 # define ERR_HOPS "first hop out of range\n"
 # define TOO_MANY_HOPS "max hops cannot be more than 255\n"
 # define PORT 33435
