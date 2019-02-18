@@ -36,11 +36,42 @@ static struct params_getter options[] = {
 	{"udp", 'U', UDP, NULL},
 };
 
+void	shortname_opt(char **argv, uint8_t *flag, int *i, t_list **parameters)
+{
+	int		j, flag_has_found;
+	uint8_t index;
+	char	c;
+
+	j = 0;
+	while ((c = argv[*i][++j]))
+	{
+		index = -1;
+		flag_has_found = 0;
+		while (++index < COUNT_OF(options))
+		{
+			if (options[index].short_name == c) {
+			  flag_has_found = 1;
+			  *flag |= options[index].code;
+			  if (options[index].f != NULL) {
+				if (argv[*i][j + 1] != '\0') {
+					return (void)list_push_back(parameters, options[index].f(&argv[*i][j + 1], options[index].code), sizeof(t_parameters));
+				} else if (argv[*i + 1] != NULL) {
+					return (void)list_push_back(parameters, options[index].f(argv[++(*i)], options[index].code), sizeof(t_parameters));
+				} else {
+					fprintf(stderr, "traceroute: option requires an argument -- '%c'\n", c); exit(EXIT_FAILURE);
+				}
+			  }
+			}
+		}
+		if (flag_has_found != 1) {
+			fprintf(stderr, "traceroute: invalid option -- '%c'\n", c); exit(EXIT_FAILURE);
+		}
+	}
+}
+
 t_list		*get_params(char **argv, int argc, uint8_t *flag)
 {
-	int 	i, j, flag_has_found;
-	uint8_t	index;
-	char	c;
+	int 	i;
 	t_list	*parameters;
 
 	i = 0;
@@ -48,45 +79,12 @@ t_list		*get_params(char **argv, int argc, uint8_t *flag)
 	while (++i < argc)
 	{
 		if (ft_strncmp(argv[i], "--", 2) == 0) {
-				longname_opt(argv[1]);
+			longname_opt(argv[i]);
+		} else if (argv[i][0] == '-') {
+			shortname_opt(argv, flag, &i, &parameters);	
+		} else {
+			list_push_back(&parameters, store_parameters(argv[i], DOMAIN), sizeof(t_parameters));
 		}
-		else if (argv[i][0] == '-') {
-			j = 0;
-			while ((c = argv[i][++j]))
-			{
-				index = -1;
-				flag_has_found = 0;
-				while (++index < COUNT_OF(options))
-				{
-					if (options[index].short_name == c) {
-						flag_has_found = 1;
-						*flag |= options[index].code;
-						if (options[index].f != NULL) {
-							if (argv[i][j + 1] != '\0')
-									list_push_back(&parameters,\
-									options[index].f(&argv[i][j + 1],\
-									options[index].code), sizeof(t_parameters));
-							else if (argv[i + 1] != NULL)
-									list_push_back(&parameters,\
-									options[index].f(argv[++i],\
-									options[index].code), sizeof(t_parameters));
-							else {
-									fprintf(stderr, "traceroute: option requires an argument -- '%c'\n", c);
-									exit(EXIT_FAILURE);
-							}
-						}
-						break ;
-					}
-				}
-				if (flag_has_found != 1) {
-					fprintf(stderr, "traceroute: invalid option -- '%c'\n", c);
-					exit(EXIT_FAILURE);
-				} else
-					break ;
-			}
-		}
-		else
-				list_push_back(&parameters, store_parameters(argv[i], DOMAIN), sizeof(t_parameters));
 	}
 	return (parameters);
 }
